@@ -7,9 +7,17 @@
 
 using namespace std;
 
+bool g_bMove = false;
+
 const int SCREEN_WIDTH = 840;
-const int SCREEN_HEIGHT = 416;
+const int SCREEN_HEIGHT = 420;
+const int BACKGROUND_IMG_WIDTH = 841;
+const int BACKGROUND_IMG_HEIGHT = 421;
+const int FIRE_IMG_WIDTH = 80;
+const int FIRE_IMG_HEIGHT = 80;
 const string WINDOW_TITLE = "Dinosaur game by Ngociv";
+
+unsigned long g_nDistance = 0;
 
 SDL_Window* g_pWindow = nullptr;
 SDL_Renderer* g_pRenderer = nullptr;
@@ -23,11 +31,9 @@ SDL_Texture* loadTexture(string file_name, SDL_Renderer* pRenderer);
 
 class objectMoving
 {
-private:
+protected:
 	string file_name;
 	SDL_Texture* pTexture;
-
-protected:
 	SDL_Rect* pSrcRect;
 	SDL_Rect* pDstRect;
 
@@ -63,46 +69,147 @@ public:
 		file_name = name;
 	}
 
-	SDL_Rect* setSrcRect(int x, int y, int w, int h)
+	void setSrcRect(int x, int y, int w, int h)
 	{
 		pSrcRect = new SDL_Rect;
 		pSrcRect->x = x;
 		pSrcRect->y = y;
 		pSrcRect->w = w;
 		pSrcRect->h = h;
-		return pSrcRect;
 	}
 
-	SDL_Rect* setDstRect(int x, int y, int w, int h)
+	void setDstRect(int x, int y, int w, int h)
 	{
 		pDstRect = new SDL_Rect;
 		pDstRect->x = x;
 		pDstRect->y = y;
 		pDstRect->w = w;
 		pDstRect->h = h;
-		return pDstRect;
 	}
 
-	SDL_Texture* setTexture()
+	void setTexture()
 	{
 		pTexture = loadTexture(file_name, g_pRenderer);
-		return pTexture;
 	}
 
-	void show()
-	{
-		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
-	}
-
-	virtual void move() = 0;
+	virtual void render() = 0;
 };
 
 class character : public objectMoving
 {
 public:
-	virtual void move()
+	virtual void render()
 	{
-		pDstRect->y -= 1;
+		if (!g_bMove){
+			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+		}
+		else{
+			static bool bMoveUp = true;
+			if (bMoveUp){
+				while (pDstRect->y >= 100){
+					SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+					if (pDstRect->y >= 179) {
+						pDstRect->y -= 3;
+					}
+					else {
+						pDstRect->y -= 2;
+					}
+					if (pDstRect->y < 100) {
+						bMoveUp = false;
+					}
+					return;
+				}
+			}
+			else{
+				while (pDstRect->y < 257){
+					if (pDstRect->y <= 179){
+						pDstRect->y += 2;
+					}
+					else{
+						pDstRect->y += 3;
+					}
+					SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+					if (pDstRect->y >= 257){
+						bMoveUp = true;
+						g_bMove = false;
+					}
+					return;
+				}
+			}
+		}
+	}
+};
+
+class background : public objectMoving
+{
+public:
+	virtual void render()
+	{
+		if (pDstRect->x == 0)
+		{
+			pSrcRect->x += 2;
+			pSrcRect->w -= 2;
+			pDstRect->w -= 2;
+			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+			if (pDstRect->w == 2)
+			{
+				pSrcRect->x = 0;
+				pSrcRect->w = BACKGROUND_IMG_WIDTH;
+				pDstRect->w = SCREEN_WIDTH;
+			}
+			g_nDistance += 2;
+			return;
+		}
+		else
+		{
+			pSrcRect->w += 2;
+			pDstRect->w += 2;
+			pDstRect->x -= 2;
+			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+			if (pDstRect->x == 2)
+			{
+				pSrcRect->w = 0;
+				pDstRect->w = 0;
+				pDstRect->x = SCREEN_WIDTH;
+			}
+			return;
+		}
+	}
+};
+
+class obstacle : public objectMoving
+{
+private:
+	bool bAppear;
+public:
+	obstacle()
+	{
+		bAppear = false;
+	}
+	void appear() {
+		bAppear = true;
+	}
+	virtual void render()
+	{
+		if (!bAppear) {
+			return;
+		}
+		if (pSrcRect->w < FIRE_IMG_WIDTH) {
+			pSrcRect->w += 2;
+		}
+		pDstRect->x -= 2;
+		if (pDstRect->w < FIRE_IMG_WIDTH) {
+			pDstRect->w += 2;
+		}
+		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+		
+		if (pDstRect->x < -FIRE_IMG_WIDTH)
+		{
+			bAppear = false;
+			pSrcRect->w = 0;
+			pDstRect->x = SCREEN_WIDTH;
+			pDstRect->w = 0;
+		}
 	}
 };
 
@@ -183,36 +290,87 @@ void loadImage(string file_name, SDL_Renderer* pRenderer, const SDL_Rect* srcrec
 	return;
 }
 
-void runGame()
+objectMoving* initCharacter()
 {
 	objectMoving* pCharacter = new character;
-	int chara_x = 140;
-	int chara_y = 252;
-	int chara_w = 70;
-	int chara_h = 90;
-	SDL_Rect* pCharacterDstRect = pCharacter->setDstRect(chara_x, chara_y, chara_w, chara_h);
 
 	pCharacter->setName("character.png");
 
-	SDL_Texture* pCharacterTexture = pCharacter->setTexture();
+	int dstX = 140;
+	int dstY = 257;
+	int dstW = 70;
+	int dstH = 90;
+	pCharacter->setDstRect(dstX, dstY, dstW, dstH);
 
-	bool bStillRun = true;
-	while (bStillRun)
+	pCharacter->setTexture();
+
+	return pCharacter;
+}
+
+objectMoving* initBackground(int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+{
+	objectMoving* pBackground = new background;
+	pBackground->setName("background.png");
+	pBackground->setSrcRect(srcX, srcY, srcW, srcH);
+	pBackground->setDstRect(dstX, dstY, dstW, dstH);
+	pBackground->setTexture();
+	return pBackground;
+}
+
+obstacle* initObstacle(int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+{
+	obstacle* pObstacle = new obstacle;
+	pObstacle->setName("fire.png");
+	//pObstacle->setSrcRect(0, 0, 0, FIRE_IMG_HEIGHT);
+	pObstacle->setSrcRect(srcX, srcY, srcW, srcH);
+	//pObstacle->setDstRect(SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+	pObstacle->setDstRect(dstX, dstY, dstW, dstH);
+	pObstacle->setTexture();
+	return pObstacle;
+}
+
+void runGame()
+{
+	objectMoving* pCharacter = initCharacter();
+	objectMoving* pBackground1 = initBackground(0, 0, BACKGROUND_IMG_WIDTH, BACKGROUND_IMG_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	objectMoving* pBackground2 = initBackground(0, 0, 0, BACKGROUND_IMG_HEIGHT, SCREEN_WIDTH, 0, 0, SCREEN_HEIGHT);
+	obstacle* pObstacle1 = initObstacle(0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+	obstacle* pObstacle2 = initObstacle(0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+
+	while (true)
 	{
-		while (SDL_PollEvent(g_pEvent))
+		SDL_RenderClear(g_pRenderer);
+		
+		pBackground1->render();
+		pBackground2->render();
+		pCharacter->render();
+
+		if (((g_nDistance - 2) % 960) == 0) {
+			pObstacle1->appear();
+		}
+		if (((g_nDistance + 420) % 960) == 0) {
+			pObstacle2->appear();
+		}
+		pObstacle1->render();
+		pObstacle2->render();
+		
+		SDL_RenderPresent(g_pRenderer);
+		SDL_Delay(11);
+		
+		if (SDL_PollEvent(g_pEvent) == 0)
 		{
-			if (g_pEvent->type == SDL_QUIT)
+			continue;
+		}
+		if (g_pEvent->type == SDL_QUIT)
+		{
+			break;
+		}
+		if (g_pEvent->type == SDL_KEYDOWN)
+		{
+			if (g_pEvent->key.keysym.sym == SDLK_SPACE)
 			{
-				bStillRun = false;
-				break;
-			} 
-			SDL_RenderClear(g_pRenderer);
-			//loadImage("background.png", g_pRenderer, NULL, NULL);
-			pCharacter->move();
-			pCharacter->show();
-	
-			SDL_RenderPresent(g_pRenderer);
-			SDL_Delay(10);
+				g_bMove = true;
+			}
 		}
 	}
 	return;
