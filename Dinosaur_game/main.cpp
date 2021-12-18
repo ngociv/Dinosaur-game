@@ -11,13 +11,16 @@ bool g_bMove = false;
 
 const int SCREEN_WIDTH = 840;
 const int SCREEN_HEIGHT = 420;
-const int BACKGROUND_IMG_WIDTH = 841;
-const int BACKGROUND_IMG_HEIGHT = 421;
+const int BACKGROUND_IMG_WIDTH = 840;
+const int BACKGROUND_IMG_HEIGHT = 420;
 const int FIRE_IMG_WIDTH = 80;
 const int FIRE_IMG_HEIGHT = 80;
+const int UFO_IMG_WIDTH = 80;
+const int UFO_IMG_HEIGT = 69;
 const string WINDOW_TITLE = "Dinosaur game by Ngociv";
 
-unsigned long g_nDistance = 0;
+unsigned long g_nTime = 0;
+unsigned long g_nSpeedGame = 2;
 
 SDL_Window* g_pWindow = nullptr;
 SDL_Renderer* g_pRenderer = nullptr;
@@ -28,6 +31,29 @@ void quitSDL(SDL_Window*& pWindow, SDL_Renderer*& pRenderer);
 void loadImage(string file_name, SDL_Renderer* pRenderer, const SDL_Rect* srcrect, const SDL_Rect* dstrect);
 void runGame();
 SDL_Texture* loadTexture(string file_name, SDL_Renderer* pRenderer);
+
+struct point_2d
+{
+	int x;
+	int y;
+};
+
+struct rectangle
+{
+	point_2d A;
+	point_2d B;
+	point_2d C;
+	point_2d D;
+};
+
+struct polygon
+{
+	point_2d leftHead;
+	point_2d rightHead;
+	point_2d leftFoot;
+	point_2d rightFoot;
+	point_2d tail;
+};
 
 class objectMoving
 {
@@ -92,6 +118,18 @@ public:
 		pTexture = loadTexture(file_name, g_pRenderer);
 	}
 
+	point_2d getDstRectXY(int plusX, int plusY) {
+		point_2d point;
+		point.x = pDstRect->x + plusX;
+		point.y = pDstRect->y + plusY;
+		return point;
+	}
+
+	string getName()
+	{
+		return file_name;
+	}
+
 	virtual void render() = 0;
 };
 
@@ -147,32 +185,30 @@ public:
 	{
 		if (pDstRect->x == 0)
 		{
-			pSrcRect->x += 2;
-			pSrcRect->w -= 2;
-			pDstRect->w -= 2;
 			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
-			if (pDstRect->w == 2)
+			pSrcRect->x += g_nSpeedGame;
+			pSrcRect->w -= g_nSpeedGame;
+			pDstRect->w -= g_nSpeedGame;
+			if (pDstRect->w <= g_nSpeedGame)
 			{
 				pSrcRect->x = 0;
 				pSrcRect->w = BACKGROUND_IMG_WIDTH;
 				pDstRect->w = SCREEN_WIDTH;
 			}
-			g_nDistance += 2;
-			return;
+			g_nTime++;
 		}
 		else
 		{
-			pSrcRect->w += 2;
-			pDstRect->w += 2;
-			pDstRect->x -= 2;
 			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
-			if (pDstRect->x == 2)
+			pSrcRect->w += g_nSpeedGame;
+			pDstRect->w += g_nSpeedGame;
+			pDstRect->x -= g_nSpeedGame;
+			if (pDstRect->x <= g_nSpeedGame)
 			{
 				pSrcRect->w = 0;
 				pDstRect->w = 0;
 				pDstRect->x = SCREEN_WIDTH;
 			}
-			return;
 		}
 	}
 };
@@ -181,29 +217,32 @@ class obstacle : public objectMoving
 {
 private:
 	bool bAppear;
+	int srcW;
 public:
 	obstacle()
 	{
 		bAppear = false;
+		srcW = 0;
 	}
-	void appear() {
+	void appear(int srcW) {
 		bAppear = true;
+		this->srcW = srcW;
 	}
 	virtual void render()
 	{
 		if (!bAppear) {
 			return;
 		}
-		if (pSrcRect->w < FIRE_IMG_WIDTH) {
-			pSrcRect->w += 2;
+		if (pSrcRect->w < srcW) {
+			pSrcRect->w += g_nSpeedGame;
 		}
-		pDstRect->x -= 2;
-		if (pDstRect->w < FIRE_IMG_WIDTH) {
-			pDstRect->w += 2;
+		pDstRect->x -= g_nSpeedGame;
+		if (pDstRect->w < srcW) {
+			pDstRect->w += g_nSpeedGame;
 		}
 		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 		
-		if (pDstRect->x < -FIRE_IMG_WIDTH)
+		if (pDstRect->x < -srcW)
 		{
 			bAppear = false;
 			pSrcRect->w = 0;
@@ -290,9 +329,9 @@ void loadImage(string file_name, SDL_Renderer* pRenderer, const SDL_Rect* srcrec
 	return;
 }
 
-objectMoving* initCharacter()
+character* initCharacter()
 {
-	objectMoving* pCharacter = new character;
+	character* pCharacter = new character;
 
 	pCharacter->setName("character.png");
 
@@ -307,9 +346,9 @@ objectMoving* initCharacter()
 	return pCharacter;
 }
 
-objectMoving* initBackground(int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+background* initBackground(int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
 {
-	objectMoving* pBackground = new background;
+	background* pBackground = new background;
 	pBackground->setName("background.png");
 	pBackground->setSrcRect(srcX, srcY, srcW, srcH);
 	pBackground->setDstRect(dstX, dstY, dstW, dstH);
@@ -317,61 +356,175 @@ objectMoving* initBackground(int srcX, int srcY, int srcW, int srcH, int dstX, i
 	return pBackground;
 }
 
-obstacle* initObstacle(int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
+obstacle* initObstacle(string file_name, int srcX, int srcY, int srcW, int srcH, int dstX, int dstY, int dstW, int dstH)
 {
 	obstacle* pObstacle = new obstacle;
-	pObstacle->setName("fire.png");
-	//pObstacle->setSrcRect(0, 0, 0, FIRE_IMG_HEIGHT);
+	pObstacle->setName(file_name);
 	pObstacle->setSrcRect(srcX, srcY, srcW, srcH);
-	//pObstacle->setDstRect(SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
 	pObstacle->setDstRect(dstX, dstY, dstW, dstH);
 	pObstacle->setTexture();
 	return pObstacle;
 }
 
+bool isInside(point_2d& M, rectangle* pRec)
+{
+	if ((pRec->A.x < M.x) && (M.x < pRec->B.x))
+	{
+		if ((pRec->A.y < M.y) && (M.y < pRec->C.y))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+rectangle* makeRectangle(obstacle* pObs)
+{
+	int plusX;
+	if (pObs->getName() == "fire.png")
+	{
+		plusX = 20;
+	}
+	else
+	{
+		plusX = 0;
+	}
+	rectangle* pRectangle = new rectangle;
+	pRectangle->A = pObs->getDstRectXY(plusX, 5);
+	pRectangle->B = pObs->getDstRectXY(65, 5);
+	pRectangle->C = pObs->getDstRectXY(66, 45);
+	pRectangle->D = pObs->getDstRectXY(plusX, 45);
+	return pRectangle;
+}
+
+polygon* makePolygon(character* pCharacter)
+{
+	polygon* pPolygon = new polygon;
+	pPolygon->leftHead = pCharacter->getDstRectXY(0, 0);
+	pPolygon->rightHead = pCharacter->getDstRectXY(45, 0);
+	pPolygon->leftFoot = pCharacter->getDstRectXY(5, 85);
+	pPolygon->rightFoot = pCharacter->getDstRectXY(45, 88);
+	pPolygon->tail = pCharacter->getDstRectXY(70, 45);
+	return pPolygon;
+}
+
+void handleEvent()
+{
+	if (SDL_PollEvent(g_pEvent) == 0)
+	{
+		return;
+	}
+	if (g_pEvent->type == SDL_QUIT)
+	{
+		exit(10);
+	}
+	if (g_pEvent->type == SDL_KEYDOWN)
+	{
+		if (g_pEvent->key.keysym.sym == SDLK_SPACE)
+		{
+			g_bMove = true;
+		}
+	}
+}
+
+bool isImpact(character* pCharacter, obstacle* pObs)
+{
+	rectangle* pRectangle = makeRectangle(pObs);
+	polygon* pPolygon = makePolygon(pCharacter);
+	
+	if (isInside(pPolygon->leftHead, pRectangle))
+	{
+		return true;
+	}
+	if (isInside(pPolygon->rightHead, pRectangle))
+	{
+		return true;
+	}
+	if (isInside(pPolygon->leftFoot, pRectangle))
+	{
+		return true;
+	}
+	if (isInside(pPolygon->rightFoot, pRectangle))
+	{
+		return true;
+	}
+	if (isInside(pPolygon->tail, pRectangle))
+	{
+		return true;
+	}
+	return false;
+}
+
+void stopGame()
+{
+	while (true)
+	{
+		SDL_RenderPresent(g_pRenderer);
+		handleEvent();
+	}
+}
+
+void handleImpact(character* pCharacter, obstacle* pObs_1, obstacle* pObs_2, obstacle* pObs_3, obstacle* pObs_4)
+{
+	if (isImpact(pCharacter, pObs_1))
+	{
+		stopGame();
+	}
+	if (isImpact(pCharacter, pObs_2))
+	{
+		stopGame();
+	}
+	if (isImpact(pCharacter, pObs_3))
+	{
+		stopGame();
+	}
+	if (isImpact(pCharacter, pObs_4))
+	{
+		stopGame();
+	}
+}
+
 void runGame()
 {
-	objectMoving* pCharacter = initCharacter();
-	objectMoving* pBackground1 = initBackground(0, 0, BACKGROUND_IMG_WIDTH, BACKGROUND_IMG_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-	objectMoving* pBackground2 = initBackground(0, 0, 0, BACKGROUND_IMG_HEIGHT, SCREEN_WIDTH, 0, 0, SCREEN_HEIGHT);
-	obstacle* pObstacle1 = initObstacle(0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
-	obstacle* pObstacle2 = initObstacle(0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+	character* pCharacter = initCharacter();
+	background* pBackground_1 = initBackground(0, 0, BACKGROUND_IMG_WIDTH, BACKGROUND_IMG_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	background* pBackground_2 = initBackground(0, 0, 0, BACKGROUND_IMG_HEIGHT, SCREEN_WIDTH, 0, 0, SCREEN_HEIGHT);
+	obstacle* pFire_1 = initObstacle("fire.png", 0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+	obstacle* pFire_2 = initObstacle("fire.png", 0, 0, 0, FIRE_IMG_HEIGHT, SCREEN_WIDTH, 270, 0, FIRE_IMG_HEIGHT);
+	obstacle* pUFO_1 = initObstacle("ufo.png", 0, 0, 0, UFO_IMG_HEIGT, SCREEN_WIDTH, 160, 0, UFO_IMG_HEIGT);
+	obstacle* pUFO_2 = initObstacle("ufo.png", 0, 0, 0, UFO_IMG_HEIGT, SCREEN_WIDTH, 260, 0, UFO_IMG_HEIGT);
 
 	while (true)
 	{
 		SDL_RenderClear(g_pRenderer);
 		
-		pBackground1->render();
-		pBackground2->render();
+		pBackground_1->render();
+		pBackground_2->render();
 		pCharacter->render();
 
-		if (((g_nDistance - 2) % 960) == 0) {
-			pObstacle1->appear();
+		if (((g_nTime - 2) % 200) == 0) {
+			srand(time(NULL));
+			int nRandom = rand() % 4;
+			switch (nRandom)
+			{
+			case 0: pFire_1->appear(FIRE_IMG_WIDTH); break;
+			case 1: pFire_2->appear(FIRE_IMG_WIDTH); break;
+			case 2: pUFO_1->appear(UFO_IMG_WIDTH); break;
+			case 3: pUFO_2->appear(UFO_IMG_WIDTH); break;
+			}
 		}
-		if (((g_nDistance + 420) % 960) == 0) {
-			pObstacle2->appear();
+		pFire_1->render();
+		pFire_2->render();
+		pUFO_1->render();
+		pUFO_2->render();
+
+		if ((g_nTime % 1500) == 0) {
+			g_nSpeedGame++;
 		}
-		pObstacle1->render();
-		pObstacle2->render();
 		
 		SDL_RenderPresent(g_pRenderer);
 		SDL_Delay(11);
-		
-		if (SDL_PollEvent(g_pEvent) == 0)
-		{
-			continue;
-		}
-		if (g_pEvent->type == SDL_QUIT)
-		{
-			break;
-		}
-		if (g_pEvent->type == SDL_KEYDOWN)
-		{
-			if (g_pEvent->key.keysym.sym == SDLK_SPACE)
-			{
-				g_bMove = true;
-			}
-		}
+		handleEvent();
+		handleImpact(pCharacter,pFire_1,pFire_2,pUFO_1,pUFO_2);
 	}
-	return;
 }
