@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 #include <SDL_ttf.h>
 
 #undef main
@@ -11,12 +12,14 @@
 using namespace std;
 
 bool g_bRunGame = false;
-bool g_bMove = false;
+bool g_bJump = false;
+bool g_bGameOver = false;
+bool g_bMoveUp = true;
 
-const int SCREEN_WIDTH = 840;
-const int SCREEN_HEIGHT = 420;
-const int BACKGROUND_IMG_WIDTH = 840;
-const int BACKGROUND_IMG_HEIGHT = 420;
+const int SCREEN_WIDTH = 841;
+const int SCREEN_HEIGHT = 421;
+const int BACKGROUND_IMG_WIDTH = 841;
+const int BACKGROUND_IMG_HEIGHT = 421;
 const int FIRE_IMG_WIDTH = 80;
 const int FIRE_IMG_HEIGHT = 80;
 const int UFO_IMG_WIDTH = 80;
@@ -152,6 +155,14 @@ public:
 class character : public object
 {
 public:
+	void beInGuide()
+	{
+		pDstRect->y = -90;
+	}
+	void beInGame()
+	{
+		pDstRect->y = 257;
+	}
 	void appear()
 	{
 		if (pDstRect->y < 257)
@@ -166,13 +177,12 @@ public:
 	}
 	virtual void render()
 	{
-		if (!g_bMove){
+		if (!g_bJump){
 			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 		}
 		else{
-			static bool bMoveUp = true;
-			if (bMoveUp){
-				while (pDstRect->y >= 100){
+			if (g_bMoveUp){
+				if (pDstRect->y >= 100){
 					SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 					if (pDstRect->y >= 179) {
 						pDstRect->y -= 3;
@@ -181,13 +191,12 @@ public:
 						pDstRect->y -= 2;
 					}
 					if (pDstRect->y < 100) {
-						bMoveUp = false;
+						g_bMoveUp = false;
 					}
-					return;
 				}
 			}
 			else{
-				while (pDstRect->y < 257){
+				if (pDstRect->y < 257){
 					if (pDstRect->y <= 179){
 						pDstRect->y += 2;
 					}
@@ -196,10 +205,9 @@ public:
 					}
 					SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 					if (pDstRect->y >= 257){
-						bMoveUp = true;
-						g_bMove = false;
+						g_bMoveUp = true;
+						g_bJump = false;
 					}
-					return;
 				}
 			}
 		}
@@ -209,6 +217,18 @@ public:
 class background : public object
 {
 public:
+	void beInGuide()
+	{
+		pSrcRect->x = 0;
+		pSrcRect->w = BACKGROUND_IMG_WIDTH;
+		pDstRect->w = SCREEN_WIDTH;
+	}
+	void beInGame()
+	{
+		pSrcRect->w = 0;
+		pDstRect->w = 0;
+		pDstRect->x = SCREEN_WIDTH;
+	}
 	void appear()
 	{
 		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
@@ -221,11 +241,11 @@ public:
 			pSrcRect->x += g_nSpeedGame;
 			pSrcRect->w -= g_nSpeedGame;
 			pDstRect->w -= g_nSpeedGame;
-			if (pDstRect->w <= g_nSpeedGame)
+			if (pDstRect->w <= 0)
 			{
-				pSrcRect->x = 0;
-				pSrcRect->w = BACKGROUND_IMG_WIDTH;
-				pDstRect->w = SCREEN_WIDTH;
+				pSrcRect->x = -pDstRect->w;
+				pSrcRect->w = BACKGROUND_IMG_WIDTH - pSrcRect->x;
+				pDstRect->w = pSrcRect->w;
 			}
 			g_nTime++;
 			g_nDistance += g_nSpeedGame;
@@ -239,11 +259,11 @@ public:
 			pSrcRect->w += g_nSpeedGame;
 			pDstRect->w += g_nSpeedGame;
 			pDstRect->x -= g_nSpeedGame;
-			if (pDstRect->x <= g_nSpeedGame)
+			if (pDstRect->x <= 0)
 			{
-				pSrcRect->w = 0;
-				pDstRect->w = 0;
-				pDstRect->x = SCREEN_WIDTH;
+				pSrcRect->w = -pDstRect->x;
+				pDstRect->w = pSrcRect->w;
+				pDstRect->x = SCREEN_WIDTH - pDstRect->w;
 			}
 		}
 	}
@@ -259,6 +279,13 @@ public:
 	{
 		bAppear = false;
 		srcW = 0;
+	}
+	void beInGame()
+	{
+		bAppear = false;
+		pSrcRect->w = 0;
+		pDstRect->x = SCREEN_WIDTH;
+		pDstRect->w = 0;
 	}
 	void appear(int srcW) {
 		bAppear = true;
@@ -345,6 +372,18 @@ public:
 		SDL_FreeSurface(pSurface);
 		pSurface = nullptr;
 	}
+	void appear()
+	{
+		if (pDstRect->y < 150)
+		{
+			pDstRect->y++;
+			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+		}
+		else
+		{
+			SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
+		}
+	}
 	virtual void render()
 	{
 		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
@@ -355,6 +394,10 @@ int main()
 {
 	initSDL(g_pWindow, g_pRenderer);
 
+	Mix_Chunk* adjhd = nullptr;
+	adjhd = Mix_LoadWAV("Bird-sound.wav");
+	int ret = Mix_PlayChannel(-1, adjhd, -1);
+
 	openingGame();
 	runGame();
 
@@ -364,6 +407,8 @@ int main()
 
 void initSDL(SDL_Window*& pWindow, SDL_Renderer*& pRenderer)
 {
+	Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 1, 4096);
+
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 	{
 		cout << "Cannot initialize SDL! Error : " << SDL_GetError() << endl;
@@ -524,7 +569,7 @@ void handleEvent()
 	{
 		if (g_pEvent->key.keysym.sym == SDLK_SPACE)
 		{
-			g_bMove = true;
+			g_bJump = true;
 		}
 		if (g_pEvent->key.keysym.sym == SDLK_RETURN)
 		{
@@ -563,6 +608,8 @@ bool isImpact(character* pCharacter, obstacle* pObs)
 
 void gameOver()
 {
+	g_bGameOver = true;
+
 	text* pGameOver = initText("dpcomic.ttf", orange, 100, 300, 100, 350, 60);
 	pGameOver->setContent("Game Over");
 	pGameOver->setTexture();
@@ -623,23 +670,14 @@ void openingGame()
 		SDL_RenderPresent(g_pRenderer);
 		handleEvent();
 	}
-
-	g_bRunGame = false;
-	character* pCharacter = initCharacter(140, -90, 70, 90);
-	while (!g_bRunGame)
-	{
-		SDL_RenderClear(g_pRenderer);
-		pBackground->appear();
-		pCharacter->appear();
-		SDL_RenderPresent(g_pRenderer);
-		SDL_Delay(11);
-		handleEvent();
-	}
 }
 
 void runGame()
 {
-	g_bMove = false;
+	text* pGuide = initText("dpcomic.ttf", orange, 100, 230, -60, 435, 60);
+	pGuide->setContent("Press Space to jump");
+	pGuide->setTexture();
+
 	character* pCharacter = initCharacter(140, 257, 70, 90);
 	background* pBackground_1 = initBackground(0, 0, BACKGROUND_IMG_WIDTH, BACKGROUND_IMG_HEIGHT, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 	background* pBackground_2 = initBackground(0, 0, 0, BACKGROUND_IMG_HEIGHT, SCREEN_WIDTH, 0, 0, SCREEN_HEIGHT);
@@ -656,42 +694,76 @@ void runGame()
 
 	while (true)
 	{
-		SDL_RenderClear(g_pRenderer);
+		g_bRunGame = false;
 		
-		pBackground_1->render();
-		pBackground_2->render();
-		pCharacter->render();
-		pScore->render();
+		pBackground_1->beInGuide();
+		pCharacter->beInGuide();
 
-		ostringstream scorePoint;
-		scorePoint << setw(4) << setfill('0') << g_nScorePoint;
-		pScorePoint->setContent(scorePoint.str());
-		pScorePoint->setTexture();
-		pScorePoint->render();
+		while (!g_bRunGame)
+		{
+			SDL_RenderClear(g_pRenderer);
+			pBackground_1->appear();
+			pCharacter->appear();
+			pGuide->appear();
+			SDL_RenderPresent(g_pRenderer);
+			SDL_Delay(11);
+			handleEvent();
+		}
+		
+		pCharacter->beInGame();
+		pBackground_2->beInGame();
+		pFire_1->beInGame();
+		pFire_2->beInGame();
+		pUFO_1->beInGame();
+		pUFO_2->beInGame();
+		g_nTime = 0;
+		g_nDistance = 0;
+		g_nSpeedGame = 2;
+		g_nScorePoint = 0;
 
-		if (((g_nTime - 2) % 200) == 0) {
-			srand(time(NULL));
-			int nRandom = rand() % 4;
-			switch (nRandom)
-			{
-			case 0: pFire_1->appear(FIRE_IMG_WIDTH); break;
-			case 1: pFire_2->appear(FIRE_IMG_WIDTH); break;
-			case 2: pUFO_1->appear(UFO_IMG_WIDTH); break;
-			case 3: pUFO_2->appear(UFO_IMG_WIDTH); break;
+		g_bMoveUp = true;
+		g_bJump = false;
+		g_bGameOver = false;
+
+		while (!g_bGameOver)
+		{
+			SDL_RenderClear(g_pRenderer);
+
+			pBackground_1->render();
+			pBackground_2->render();
+			pCharacter->render();
+			pScore->render();
+
+			ostringstream scorePoint;
+			scorePoint << setw(4) << setfill('0') << g_nScorePoint;
+			pScorePoint->setContent(scorePoint.str());
+			pScorePoint->setTexture();
+			pScorePoint->render();
+
+			if (((g_nTime - 2) % 200) == 0) {
+				srand(time(NULL));
+				int nRandom = rand() % 4;
+				switch (nRandom)
+				{
+				case 0: pFire_1->appear(FIRE_IMG_WIDTH); break;
+				case 1: pFire_2->appear(FIRE_IMG_WIDTH); break;
+				case 2: pUFO_1->appear(UFO_IMG_WIDTH); break;
+				case 3: pUFO_2->appear(UFO_IMG_WIDTH); break;
+				}
 			}
-		}
-		pFire_1->render();
-		pFire_2->render();
-		pUFO_1->render();
-		pUFO_2->render();
+			pFire_1->render();
+			pFire_2->render();
+			pUFO_1->render();
+			pUFO_2->render();
 
-		if ((g_nTime % 1500) == 0) {
-			g_nSpeedGame++;
+			if ((g_nTime % 1500) == 0) {
+				g_nSpeedGame++;
+			}
+
+			SDL_RenderPresent(g_pRenderer);
+			SDL_Delay(11);
+			handleEvent();
+			handleImpact(pCharacter, pFire_1, pFire_2, pUFO_1, pUFO_2);
 		}
-		
-		SDL_RenderPresent(g_pRenderer);
-		SDL_Delay(11);
-		handleEvent();
-		handleImpact(pCharacter,pFire_1,pFire_2,pUFO_1,pUFO_2);
 	}
 }
