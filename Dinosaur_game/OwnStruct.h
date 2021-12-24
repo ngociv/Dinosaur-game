@@ -16,6 +16,7 @@ struct rectangle
 	point_2d D;
 };
 
+//a polygon with 5 vertices that represent character
 struct polygon
 {
 	point_2d leftHead;

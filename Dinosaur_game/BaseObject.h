@@ -21,15 +21,15 @@ public:
 
 	~baseObject();
 
-	void setName(std::string name);
+	void setName(const std::string& name);
 
-	void setSrcRect(SDL_Rect srcRect);
+	void setSrcRect(const SDL_Rect& srcRect);
 
-	void setDstRect(SDL_Rect dstRect);
+	void setDstRect(const SDL_Rect& dstRect);
 
 	void setTexture();
 
-	point_2d getDstRectXY(int plusX, int plusY);
+	point_2d getCoordinate(int plusX, int plusY);
 
 	std::string getName();
 

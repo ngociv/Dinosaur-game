@@ -49,10 +49,10 @@ public:
 	text();
 	~text();
 	void setContent(std::string content);
-	void setFont(int nSize);
-	void setColor(colorRGB color);
+	void setFont(const int& nSize);
+	void setColor(const colorRGB& color);
 	void setTexture();
-	void appear();
+	void appearInGuide();
 	virtual void render();
 };
 

@@ -1,7 +1,15 @@
+#include "Object.h"
 #include "Constant.h"
-#include "GlobalVariable.h"
 
 
+extern int g_nScore;
+extern unsigned long g_nTime;
+extern unsigned long g_nDistance;
+extern unsigned long g_nGameSpeed;
+
+extern SDL_Renderer* g_pRenderer;
+
+//setup to get ready to appear in guide part
 void background::beInGuide()
 {
 	pSrcRect->x = 0;
@@ -9,6 +17,7 @@ void background::beInGuide()
 	pDstRect->w = SCREEN_WIDTH;
 }
 
+//reset to get ready to start running game
 void background::reset()
 {
 	pSrcRect->w = 0;
@@ -32,8 +41,8 @@ void background::render()
 		renderBackground_1();
 
 		g_nTime++;
-		g_nDistance += g_nSpeedGame;
-		if ((g_nDistance % 80) < g_nSpeedGame) {
+		g_nDistance += g_nGameSpeed;
+		if ((g_nDistance % 80) < g_nGameSpeed) {
 			g_nScore++;
 		}
 	}
@@ -47,11 +56,11 @@ void background::render()
 void background::renderBackground_1()
 {
 	SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
-	pSrcRect->x += g_nSpeedGame;
-	pSrcRect->w -= g_nSpeedGame;
-	pDstRect->w -= g_nSpeedGame;
+	pSrcRect->x += g_nGameSpeed;
+	pSrcRect->w -= g_nGameSpeed;
+	pDstRect->w -= g_nGameSpeed;
 
-	//reset
+	//reset to re-use
 	if (pDstRect->w <= 0)
 	{
 		pSrcRect->x = -pDstRect->w;
@@ -63,11 +72,11 @@ void background::renderBackground_1()
 void background::renderBackground_2()
 {
 	SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
-	pSrcRect->w += g_nSpeedGame;
-	pDstRect->w += g_nSpeedGame;
-	pDstRect->x -= g_nSpeedGame;
+	pSrcRect->w += g_nGameSpeed;
+	pDstRect->w += g_nGameSpeed;
+	pDstRect->x -= g_nGameSpeed;
 
-	//reset
+	//reset to re-use
 	if (pDstRect->x <= 0)
 	{
 		pSrcRect->w = -pDstRect->x;

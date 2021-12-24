@@ -3,11 +3,34 @@
 #include <SDL_image.h>
 #include <SDL_mixer.h>
 
-#include "CommonFuction.h"
 #include "Constant.h"
-#include "GlobalVariable.h"
+#include "CommonFuction.h"
+
 
 using namespace std;
+
+extern SDL_Event* g_pEvent;
+extern SDL_Window* g_pWindow;
+extern SDL_Renderer* g_pRenderer;
+
+extern text* g_pScore;
+extern text* g_pScorePoint;
+
+extern obstacle* g_pUFO_1;
+extern obstacle* g_pUFO_2;
+extern obstacle* g_pFire_1;
+extern obstacle* g_pFire_2;
+
+extern character* g_pCharacter;
+
+extern background* g_pBackground_1;
+extern background* g_pBackground_2;
+
+extern Mix_Chunk* g_pJumpSound;
+extern Mix_Chunk* g_pBackgroundSound;
+
+extern polygon* g_pPolygon;
+extern rectangle* g_pRectangle;
 
 void initProgram()
 {
@@ -58,41 +81,52 @@ void initSDL()
 
 void quitProgram()
 {
-	free(g_pEvent);
-	g_pEvent = nullptr;
-	SDL_DestroyRenderer(g_pRenderer);
-	g_pRenderer = nullptr;
-	SDL_DestroyWindow(g_pWindow);
-	g_pWindow = nullptr;
+	Mix_FreeChunk(g_pJumpSound);
+	Mix_FreeChunk(g_pBackgroundSound);
 	Mix_CloseAudio();
+	delete(g_pEvent);
+	delete(g_pRectangle);
+	delete(g_pPolygon);
+	delete(g_pScore);
+	delete(g_pScorePoint);
+	delete(g_pCharacter);
+	delete(g_pUFO_1);
+	delete(g_pUFO_2);
+	delete(g_pFire_1);
+	delete(g_pFire_2);
+	delete(g_pBackground_1);
+	delete(g_pBackground_2);
 	TTF_Quit();
+	SDL_DestroyRenderer(g_pRenderer);
+	SDL_DestroyWindow(g_pWindow);
 	SDL_Quit();
 }
 
-SDL_Texture* loadTexture(string file_name)
+//create texture of object to get ready to render
+SDL_Texture* loadTexture(const string& file_name)
 {
-	SDL_Surface* pLoad = nullptr;
+	SDL_Surface* pSurface = nullptr;
 	SDL_Texture* pTexture = nullptr;
 
-	pLoad = IMG_Load(file_name.c_str());
-	if (!pLoad)
+	pSurface = IMG_Load(file_name.c_str());
+	if (!pSurface)
 	{
 		cout << "Cannot load image! Error : " << IMG_GetError() << endl;
 		exit(2);
 	}
-	pTexture = SDL_CreateTextureFromSurface(g_pRenderer, pLoad);
+	pTexture = SDL_CreateTextureFromSurface(g_pRenderer, pSurface);
 	if (!pTexture)
 	{
 		cout << "Cannot create texture from surface! Error : " << SDL_GetError() << endl;
 		exit(2);
 	}
-	SDL_FreeSurface(pLoad);
-	pLoad = nullptr;
+	SDL_FreeSurface(pSurface);
+	pSurface = nullptr;
 
 	return pTexture;
 }
 
-character* initCharacter(SDL_Rect characterDstRect)
+character* initCharacter(const SDL_Rect& characterDstRect)
 {
 	character* pCharacter = new character;
 	pCharacter->setName(CHARACTER_NAME);
@@ -101,7 +135,7 @@ character* initCharacter(SDL_Rect characterDstRect)
 	return pCharacter;
 }
 
-background* initBackground(SDL_Rect backgroundSrcRect, SDL_Rect backgroundDstRect)
+background* initBackground(const SDL_Rect& backgroundSrcRect, const SDL_Rect& backgroundDstRect)
 {
 	background* pBackground = new background;
 	pBackground->setName(BACKGROUND_NAME);
@@ -111,7 +145,7 @@ background* initBackground(SDL_Rect backgroundSrcRect, SDL_Rect backgroundDstRec
 	return pBackground;
 }
 
-obstacle* initObstacle(string file_name, SDL_Rect obstacleSrcRect, SDL_Rect obstacleDstRect)
+obstacle* initObstacle(string file_name, const SDL_Rect& obstacleSrcRect, const SDL_Rect& obstacleDstRect)
 {
 	obstacle* pObstacle = new obstacle;
 	pObstacle->setName(file_name);
@@ -121,7 +155,7 @@ obstacle* initObstacle(string file_name, SDL_Rect obstacleSrcRect, SDL_Rect obst
 	return pObstacle;
 }
 
-text* initText(string font_name, colorRGB color, int nSize, SDL_Rect textDstRect)
+text* initText(string font_name, const colorRGB& color, const int& nSize, const SDL_Rect& textDstRect)
 {
 	text* pText = new text;
 	pText->setName(font_name);

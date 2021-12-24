@@ -1,5 +1,10 @@
+#include "Object.h"
 #include "Constant.h"
-#include "GlobalVariable.h"
+
+
+extern unsigned long g_nGameSpeed;
+
+extern SDL_Renderer* g_pRenderer;
 
 obstacle::obstacle()
 {
@@ -7,6 +12,7 @@ obstacle::obstacle()
 	srcW = 0;
 }
 
+//reset to get ready to start running game
 void obstacle::reset()
 {
 	bAppear = false;
@@ -15,6 +21,7 @@ void obstacle::reset()
 	pDstRect->w = 0;
 }
 
+//allow to appear
 void obstacle::appear(int srcW) {
 	bAppear = true;
 	this->srcW = srcW;
@@ -22,7 +29,7 @@ void obstacle::appear(int srcW) {
 
 void obstacle::render()
 {
-	//if obstacle is not allowed to appearInGuide
+	//if obstacle is not allowed to appear
 	if (!bAppear) {
 		return;
 	}
@@ -30,12 +37,12 @@ void obstacle::render()
 	//if it is
 	if (pSrcRect->w < srcW)
 	{
-		pSrcRect->w += g_nSpeedGame;
+		pSrcRect->w += g_nGameSpeed;
 	}
-	pDstRect->x -= g_nSpeedGame;
+	pDstRect->x -= g_nGameSpeed;
 	if (pDstRect->w < srcW)
 	{
-		pDstRect->w += g_nSpeedGame;
+		pDstRect->w += g_nGameSpeed;
 	}
 	SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 

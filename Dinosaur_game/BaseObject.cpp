@@ -1,5 +1,4 @@
 #include "CommonFuction.h"
-#include "GlobalVariable.h"
 
 baseObject::baseObject()
 {
@@ -13,26 +12,23 @@ baseObject::~baseObject()
 	if (pSrcRect)
 	{
 		delete pSrcRect;
-		pSrcRect = nullptr;
 	}
 	if (pDstRect)
 	{
 		delete pDstRect;
-		pDstRect = nullptr;
 	}
 	if (pTexture)
 	{
 		SDL_DestroyTexture(pTexture);
-		pTexture = nullptr;
 	}
 }
 
-void baseObject::setName(std::string name)
+void baseObject::setName(const std::string& name)
 {
 	file_name = name;
 }
 
-void baseObject::setSrcRect(SDL_Rect srcRect)
+void baseObject::setSrcRect(const SDL_Rect& srcRect)
 {
 	pSrcRect = new SDL_Rect;
 	pSrcRect->x = srcRect.x;
@@ -41,7 +37,7 @@ void baseObject::setSrcRect(SDL_Rect srcRect)
 	pSrcRect->h = srcRect.h;
 }
 
-void baseObject::setDstRect(SDL_Rect dstRect)
+void baseObject::setDstRect(const SDL_Rect& dstRect)
 {
 	pDstRect = new SDL_Rect;
 	pDstRect->x = dstRect.x;
@@ -55,7 +51,11 @@ void baseObject::setTexture()
 	pTexture = loadTexture(file_name);
 }
 
-point_2d baseObject::getDstRectXY(int plusX, int plusY) {
+//get coordinate of a point on the object
+//we set the (DstRect->x, DstRect->y) point of the object is root
+//from root, we can get any point coordinate on the object by adding plusX and plusY
+//for example: we will get the root if plusX = 0, plusY = 0;
+point_2d baseObject::getCoordinate(int plusX, int plusY) {
 	point_2d point;
 	point.x = pDstRect->x + plusX;
 	point.y = pDstRect->y + plusY;

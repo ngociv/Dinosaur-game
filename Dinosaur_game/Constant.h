@@ -16,7 +16,7 @@ const int SCREEN_HEIGHT = 421;
 //*********************
 //		BACKGROUND
 //*********************
-const std::string BACKGROUND_NAME = "Background.png";
+const std::string BACKGROUND_NAME = "background.png";
 
 const int BACKGROUND_WIDTH = 841;
 const int BACKGROUND_HEIGHT = 421;
@@ -31,7 +31,7 @@ const SDL_Rect BACKGROUND_2_DST_RECT = { SCREEN_WIDTH,0,0,SCREEN_HEIGHT };
 //*********************
 //		CHARACTER
 //*********************
-const std::string CHARACTER_NAME = "Character.png";
+const std::string CHARACTER_NAME = "character.png";
 
 const SDL_Rect CHARACTER_DST_RECT = { 140,257,70,90 };
 
@@ -46,9 +46,9 @@ const int DST_RECT_Y_WHERE_SPEED_CHANGED = 179;
 //*********************
 //		OBSTACLE
 //*********************
-const std::string FIRE_NAME = "fire.png";
-const std::string UFO_NAME = "ufo.png";
-
+// 
+//   FIRE_NAME = "fire.png";
+//   UFO_NAME = "ufo.png";
 const int FIRE_WIDTH = 80;
 const int FIRE_HEIGHT = 80;
 
@@ -66,8 +66,11 @@ const SDL_Rect HIGH_UFO_DST_RECT = { SCREEN_WIDTH,160,0,UFO_HEIGHT };
 //*********************
 //	    SDL MIXER
 //*********************
+const int CHANNEL = -1;
 const int CHANNELS = 1;
 const int CHUNKSIZE = 4096;
+const int JUMP_SOUND_LOOPS = 0;
+const int BACKGROUND_SOUND_LOOPS = -1;
 
 
 //*********************
@@ -93,14 +96,14 @@ const SDL_Rect ENTER_2_DST_RECT = { 200,200,450,65 };
 const int ENTER_2_SIZE = 100;
 
 // "Game over";
-const SDL_Rect GAME_OVER_DST_RECT = { 300,100,350,60 };
+const SDL_Rect GAME_OVER_DST_RECT = { 230,90,400,80 };
 const int GAME_OVER_SIZE = 100;
 
 // "Score";
-const SDL_Rect SCORE_TEXT_DST_RECT = { 680,20,70,25 };
+const SDL_Rect SCORE_TEXT_DST_RECT = { 680,20,80,25 };
 const int SCORE_TEXT_SIZE = 100;
 
-const SDL_Rect SCORE_POINT_DST_RECT = { 750,20,55,25 };
+const SDL_Rect SCORE_POINT_DST_RECT = { 758,20,55,25 };
 const int SCORE_POINT_SIZE = 100;
 
 

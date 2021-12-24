@@ -1,9 +1,11 @@
 #include <iostream>
 
+#include "Object.h"
 #include "Constant.h"
-#include "GlobalVariable.h"
 
 using namespace std;
+
+extern SDL_Renderer* g_pRenderer;
 
 text::text()
 {
@@ -16,7 +18,6 @@ text::~text()
 	if (pFont)
 	{
 		TTF_CloseFont(pFont);
-		pFont = nullptr;
 	}
 }
 
@@ -25,7 +26,7 @@ void text::setContent(std::string content)
 	this->content = content;
 }
 
-void text::setFont(int nSize)
+void text::setFont(const int& nSize)
 {
 	pFont = TTF_OpenFont(file_name.c_str(), nSize);
 	if (!pFont)
@@ -35,7 +36,7 @@ void text::setFont(int nSize)
 	}
 }
 
-void text::setColor(colorRGB color)
+void text::setColor(const colorRGB& color)
 {
 	this->color.r = color.r;
 	this->color.g = color.g;
@@ -43,6 +44,7 @@ void text::setColor(colorRGB color)
 	this->color.a = 255;
 }
 
+//create texture of text to get ready to render
 void text::setTexture()
 {
 	SDL_Surface* pSurface = nullptr;
@@ -61,16 +63,17 @@ void text::setTexture()
 	}
 
 	SDL_FreeSurface(pSurface);
-	pSurface = nullptr;
 }
 
-void text::appear()
+void text::appearInGuide()
 {
+	//the guide text will run down from top
 	if (pDstRect->y < GUIDE_DST_RECT.y)
 	{
 		pDstRect->y++;
 		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);
 	}
+	//and it stops when reach the middle of window 
 	else
 	{
 		SDL_RenderCopy(g_pRenderer, pTexture, pSrcRect, pDstRect);

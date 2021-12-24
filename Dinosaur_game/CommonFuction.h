@@ -13,15 +13,15 @@ void initSDL();
 
 void quitProgram();
 
-SDL_Texture* loadTexture(std::string file_name);
+SDL_Texture* loadTexture(const std::string& file_name);
 
-character* initCharacter(SDL_Rect characterDstRect);
+character* initCharacter(const SDL_Rect& characterDstRect);
 
-background* initBackground(SDL_Rect backgroundSrcRect, SDL_Rect backgroundDstRect);
+background* initBackground(const SDL_Rect& backgroundSrcRect, const SDL_Rect& backgroundDstRect);
 
-obstacle* initObstacle(std::string file_name, SDL_Rect obstacleSrcRect, SDL_Rect obstacleDstRect);
+obstacle* initObstacle(std::string file_name, const SDL_Rect& obstacleSrcRect, const SDL_Rect& obstacleDstRect);
 
-text* initText(std::string font_name, colorRGB color, int nSize, SDL_Rect textDstRect);
+text* initText(std::string font_name, const colorRGB& color, const int& nSize, const SDL_Rect& textDstRect);
 
 
 #endif // !COMMON_FUCTION_H_
